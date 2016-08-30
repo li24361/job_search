@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>地图展示</title>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no, width=device-width">
+    <link rel="stylesheet" href="http://cache.amap.com/lbs/static/main1119.css"/>
+    <script src="http://cache.amap.com/lbs/static/es5.min.js"></script>
+    <script src="http://webapi.amap.com/maps?v=1.3&key=481899d905277fb68448f104e9a86137&plugin=AMap.Geocoder"></script>
+    <script type="text/javascript" src="http://cache.amap.com/lbs/static/addToolbar.js"></script>
+    <script src="http://cache.amap.com/lbs/static/jquery-1.9.1.js"></script>
+</head>
+<body onload="loadJobLocation()">
+<div id="container"></div>
+<div id="tip">
+    地点：<input type="text" name="location" id='location' value=""/>
+        <input type="button" class="button" value="查询" onClick="javascript:addMarkerByInputName()"/>
+</div>
+<script>
+    var rentMarkerArray = [];
+    var map = new AMap.Map('container', {
+        resizeEnable: true,
+        zoom:13,
+        center: [120.399313,36.113982]
+    });
+
+    function loadJobLocation() {
+        $.ajax({
+            url: "http://localhost:8090/getJobInfo",
+            type: "get",
+            dataType: 'json',
+            success: function (data) {
+                data.forEach(function (item, index) {
+                    addMarkerByAddress(item);
+                });
+            }
+        });
+    }
+
+    var geocoder = new AMap.Geocoder({
+        city: "青岛",
+        radius: 1000
+    });
+    function addMarkerByInputName(){
+        var address =$('#location').val();
+        console.log(address);
+        geocoder.getLocation(address, function(status, result) {
+            if (status === "complete" && result.info === 'OK') {
+                var geocode = result.geocodes[0];
+                var marker = new AMap.Marker({
+                    map: map,
+                    title: '住处',
+                    position: [geocode.location.getLng(), geocode.location.getLat()]
+                });
+            }
+        })
+
+    }
+    function addMarkerByAddress(item){
+        map.clearMap();
+        var address = item['address'];
+
+        geocoder.getLocation(address, function(status, result) {
+            if (status === "complete" && result.info === 'OK') {
+                var geocode = result.geocodes[0];
+                rentMarker = new AMap.Marker({
+                    map: map,
+                    title: item['company'],
+                    icon: 'http://webapi.amap.com/theme/v1.3/markers/n/mark_b.png',
+                    position: [geocode.location.getLng(), geocode.location.getLat()]
+                });
+//                rentMarker.content = "<div>详细信息：<a target = '_blank' href='"+item['position']+"'>" + item['position'] + "</a><div>"
+
+//                rentMarker.on('click', function(e) {
+//                     infoWindow.setContent(e.target.content);
+//                     infoWindow.open(map, e.target.getPosition());
+//                     if (amapTransfer) amapTransfer.clear();
+//                     amapTransfer = new AMap.Transfer({
+//                         map: map,
+//                         policy: AMap.TransferPolicy.LEAST_TIME,
+//                         city: "北京市",
+//                         panel: 'transfer-panel'
+//                     });
+//                     amapTransfer.search([{
+//                         keyword: workAddress
+//                     }, {
+//                         keyword: address
+//                     }], function(status, result) {})
+//                });
+
+//                rentMarker.setLabel({
+//                    offset: new AMap.Pixel(20, 20),//修改label相对于maker的位置
+//                    content: "<div><a target = '_blank' href='"+item['positionUrl']+"'>" + item['position'] + "</a><div>"
+//                });
+                var info = [];
+                info.push("<div><div>公司名称 ："+item['company']+"</div> ");
+                info.push("职位 ：<b><a target = '_blank' href='"+item['positionUrl']+"'>" + item['position'] + "</a></b>");
+                info.push("简介 ："+item['positionAdvantage']);
+                info.push("      "+item['salary']+"   "+item['education'])
+                info.push("地址 ："+item['address']+"</div>");
+                rentMarker.content = info.join("<br/>");
+                rentMarker.on('click', markerClick);
+                rentMarkerArray.push(rentMarker);
+            }
+            else {
+                console.log(item['address']+"没有查找到信息！")
+            }
+        })
+    }
+
+    var infoWindow = new AMap.InfoWindow({offset: new AMap.Pixel(0, -30)});
+    function markerClick(e) {
+        infoWindow.setContent(e.target.content);
+        infoWindow.open(map, e.target.getPosition());
+    }
+</script>
+</body>
+</html>
